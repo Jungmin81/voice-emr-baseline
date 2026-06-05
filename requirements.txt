@@ -1,0 +1,34 @@
+# Voice EMR Baseline — 의존성
+# 모든 패키지는 상업적 사용 가능한 라이선스만 포함
+
+# ─── STT ───
+faster-whisper>=1.0.3       # MIT License
+# CTranslate2는 faster-whisper 의존성으로 자동 설치 (MIT)
+
+# ─── 키워드 추출 ───
+keybert>=0.8.4              # MIT License
+sentence-transformers>=2.7.0  # Apache 2.0
+scikit-learn>=1.3.0         # BSD 3-Clause
+
+# ─── LLM (SOAP 요약) ───
+transformers>=4.45.0        # Apache 2.0
+torch>=2.0.0                # BSD-style
+accelerate>=0.34.0          # Apache 2.0
+# bitsandbytes는 선택 (4bit/8bit 양자화 시) — MIT
+# bitsandbytes>=0.43.0
+
+# ─── 웹 UI (선택) ───
+gradio>=4.44.0              # Apache 2.0
+pandas>=2.0.0               # BSD 3-Clause
+
+# ─── CPU 최적화 LLM (선택) ───
+llama-cpp-python>=0.2.90    # MIT
+psutil>=5.9.0               # BSD — 리소스 자동 감지
+
+# ─── 오디오 처리 ───
+soundfile>=0.12.0           # BSD-3-Clause
+librosa>=0.10.0             # ISC License
+# Whisper는 ffmpeg를 내부적으로 사용. 별도 설치 필요:
+# - Windows:  choco install ffmpeg  또는  winget install ffmpeg
+# - macOS:    brew install ffmpeg
+# - Ubuntu:   apt install ffmpeg
