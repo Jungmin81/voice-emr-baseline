@@ -1,26 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Voice EMR Baseline — 벤치마크 스크립트
+Voice EMR Baseline — 벤치마크 스크립트 (v2: warm-up + 정확한 시간 측정)
 
-여러 설정(Whisper 모델 크기 × CPU/GPU × LLM 옵션)을 자동으로 돌려서
-처리 시간 + 추론 결과 + SOAP 결과를 한 번에 비교.
+개선 사항:
+- 모델 로딩 시간을 명시적으로 분리 측정
+- Warm-up 호출 1회 후 본 측정 시작 (cold/warm 시간 모두 기록)
+- 리포트에 "model_load_sec" / "warm_inference_sec" 명확히 표시
 
 사용:
-    # 빠른 벤치마크 (STT만, 7개 설정)
-    python benchmark.py --samples samples/sample_short.wav samples/sample_long.wav
-
-    # 전체 벤치마크 (SOAP 포함, 12개 설정)
-    python benchmark.py --samples samples/sample_short.wav samples/sample_long.wav --preset full
-
-    # 커스텀 모델만
-    python benchmark.py --samples samples/*.wav --models small medium large-v3 --devices cuda
-
-출력:
-    bench_results/
-      ├── results.csv       (엑셀용 요약표)
-      ├── results.json      (전체 데이터)
-      └── report.md         (마크다운 비교 리포트, 모든 결과 포함)
+    python benchmark.py --samples samples/*.wav --preset full
 """
 import argparse
 import csv
@@ -33,7 +22,6 @@ from datetime import datetime
 
 
 def free_memory():
-    """모델 사이 메모리 정리."""
     gc.collect()
     try:
         import torch
@@ -48,14 +36,13 @@ def free_memory():
 # 프리셋 설정
 # ─────────────────────────────────────────────────────────────
 def build_quick_configs(devices):
-    """STT만 — 빠른 벤치마크 (LLM 없음)."""
+    """STT만 — 빠른 벤치마크."""
     configs = []
     models = ["tiny", "small", "medium"]
     if "cuda" in devices:
-        models.append("large-v3")  # large는 GPU에서만 (CPU에선 너무 느림)
+        models.append("large-v3")
     for model in models:
         for device in devices:
-            # large-v3는 CPU에서 너무 느려 제외
             if model == "large-v3" and device == "cpu":
                 continue
             configs.append({
@@ -71,7 +58,6 @@ def build_full_configs(devices):
     """STT + SOAP — 전체 벤치마크."""
     configs = build_quick_configs(devices)
 
-    # GPU + transformers LLM 조합 (RTX 3060 12GB에 맞춤)
     if "cuda" in devices:
         configs += [
             {
@@ -86,9 +72,14 @@ def build_full_configs(devices):
                 "device": "cuda",
                 "llm_name": "Qwen/Qwen2.5-3B-Instruct",
             },
+            {
+                "label": "large-v3 | CUDA | Qwen2.5-7B (GPU)",
+                "whisper": "large-v3",
+                "device": "cuda",
+                "llm_name": "Qwen/Qwen2.5-7B-Instruct",
+            },
         ]
 
-    # CPU + GGUF 조합
     if "cpu" in devices:
         configs += [
             {
@@ -109,10 +100,9 @@ def build_full_configs(devices):
 
 
 # ─────────────────────────────────────────────────────────────
-# 벤치마크 실행
+# 벤치마크 실행 — Warm-up + 정확한 시간 측정
 # ─────────────────────────────────────────────────────────────
 def run_one_config(config, samples, results_list, save_partial_fn):
-    """한 설정으로 모든 샘플 처리."""
     import baseline as bl
 
     print(f"\n{'='*70}")
@@ -122,8 +112,7 @@ def run_one_config(config, samples, results_list, save_partial_fn):
     free_memory()
 
     try:
-        # Processor 생성
-        t_load_start = time.time()
+        # ─── Step 1. Processor 생성 ───
         processor = bl.Processor(
             whisper_model=config["whisper"],
             device=config["device"],
@@ -132,7 +121,41 @@ def run_one_config(config, samples, results_list, save_partial_fn):
             skip_llm=config.get("skip_llm", False),
         )
 
-        # 첫 샘플 처리 시 모델 lazy 로드되므로 그 시간도 측정에 포함
+        # ─── Step 2. 모델 명시적 사전 로딩 (시간 측정) ───
+        print(f"  📦 모델 로딩...")
+        t_load_start = time.time()
+
+        # Whisper 모델 로드 트리거
+        _ = processor.whisper
+        whisper_load_sec = time.time() - t_load_start
+
+        # LLM 모델 로드 (있는 경우)
+        llm_load_sec = 0
+        if not config.get("skip_llm", False):
+            t_llm_load = time.time()
+            processor._ensure_llm()
+            llm_load_sec = time.time() - t_llm_load
+
+        # KeyBERT 모델 로드
+        t_kw = time.time()
+        _ = processor.kw_model
+        kw_load_sec = time.time() - t_kw
+
+        total_load_sec = whisper_load_sec + llm_load_sec + kw_load_sec
+        print(f"     Whisper: {whisper_load_sec:.2f}초 / "
+              f"LLM: {llm_load_sec:.2f}초 / "
+              f"KeyBERT: {kw_load_sec:.2f}초 "
+              f"→ 총 로딩: {total_load_sec:.2f}초")
+
+        # ─── Step 3. Warm-up 호출 (첫 sample 1회, 측정 X) ───
+        if samples:
+            print(f"  🔥 워밍업 ({Path(samples[0]).name})...")
+            t_warm = time.time()
+            _ = processor.process_file(str(samples[0]))
+            warmup_sec = time.time() - t_warm
+            print(f"     워밍업 완료: {warmup_sec:.2f}초")
+
+        # ─── Step 4. 본 측정 (모든 sample, warm 상태) ───
         for j, sample in enumerate(samples):
             sample_name = Path(sample).name
             print(f"\n  [{j+1}/{len(samples)}] {sample_name}")
@@ -141,7 +164,6 @@ def run_one_config(config, samples, results_list, save_partial_fn):
             result = processor.process_file(str(sample))
             total_sec = time.time() - t_total_start
 
-            # 결과 정리
             entry = {
                 "config_label": config["label"],
                 "whisper_model": config["whisper"],
@@ -161,7 +183,10 @@ def run_one_config(config, samples, results_list, save_partial_fn):
                     or result.get("llm_meta", {}).get("llm_sec")
                     or 0
                 ),
-                "total_sec": round(total_sec, 2),
+                "warm_total_sec": round(total_sec, 2),  # 워밍업 후 정확한 시간
+                "model_load_sec": round(total_load_sec, 2),  # 1회만 측정됨
+                "whisper_load_sec": round(whisper_load_sec, 2),
+                "llm_load_sec": round(llm_load_sec, 2),
                 "status": result.get("status", "ok"),
                 "transcription": result.get("transcription", ""),
                 "keywords": result.get("keywords", []),
@@ -170,17 +195,17 @@ def run_one_config(config, samples, results_list, save_partial_fn):
                 "error": result.get("error"),
             }
 
+            # 출력 표시
             print(f"     음성 {entry['audio_sec']:.1f}초 → "
-                  f"STT {entry['stt_sec']:.1f}초 (RTF {entry['stt_rtf']}) "
-                  + (f"+ LLM {entry['llm_sec']:.1f}초" if entry['llm_sec'] > 0 else "")
-                  + f" = 총 {entry['total_sec']:.1f}초")
+                  f"STT {entry['stt_sec']:.2f}초 (RTF {entry['stt_rtf']:.3f}) "
+                  + (f"+ LLM {entry['llm_sec']:.2f}초" if entry['llm_sec'] > 0 else "")
+                  + f" = 처리 {entry['warm_total_sec']:.2f}초")
             print(f"     텍스트: {entry['transcription'][:60]}"
                   + ("..." if len(entry['transcription']) > 60 else ""))
 
             results_list.append(entry)
-            save_partial_fn(results_list)  # 매번 저장 (크래시 대비)
+            save_partial_fn(results_list)
 
-        # Processor 정리
         del processor
 
     except Exception as e:
@@ -201,12 +226,14 @@ def run_one_config(config, samples, results_list, save_partial_fn):
 
 
 # ─────────────────────────────────────────────────────────────
-# 리포트 생성
+# 리포트 — model_load_sec 컬럼 추가
 # ─────────────────────────────────────────────────────────────
 def save_csv(results, path):
     fieldnames = [
         "config_label", "whisper_model", "device", "llm",
-        "audio", "audio_sec", "stt_sec", "stt_rtf", "llm_sec", "total_sec",
+        "audio", "audio_sec",
+        "model_load_sec", "whisper_load_sec", "llm_load_sec",
+        "stt_sec", "stt_rtf", "llm_sec", "warm_total_sec",
         "status", "error",
     ]
     with open(path, "w", encoding="utf-8-sig", newline="") as f:
@@ -217,7 +244,6 @@ def save_csv(results, path):
 
 
 def save_json(results, path):
-    # keywords의 tuple을 list로 변환
     serial = []
     for r in results:
         rr = dict(r)
@@ -229,68 +255,80 @@ def save_json(results, path):
 
 def save_markdown(results, path, samples):
     lines = [
-        f"# Voice EMR 벤치마크 리포트",
+        f"# Voice EMR 벤치마크 리포트 (v2)",
         f"",
         f"**실행 시각**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         f"**테스트 샘플**: " + ", ".join(Path(s).name for s in samples),
         f"**총 설정 수**: {len(set(r['config_label'] for r in results))}",
         f"",
+        f"> 📌 **측정 방식 변경**: 모델 로딩 시간을 분리 측정하고, 워밍업 호출 1회 후 본 측정합니다.",
+        f"> 따라서 **`warm_total_sec`이 실제 운영 환경에서의 처리 시간**입니다.",
+        f"> 첫 실행 시 사용자가 기다리는 시간 = `model_load_sec` + `warm_total_sec`",
+        f"",
         f"---",
         f"",
     ]
 
-    # ─── 1. 처리 시간 비교표 (샘플별) ───
-    lines.append(f"## 📊 처리 시간 비교\n")
+    # ─── 모델 로딩 시간 요약 (한 번만) ───
+    lines.append(f"## 🔧 모델 로딩 시간 (1회성)\n")
+    lines.append("설정마다 메모리에 모델 올리는 시간. **서버 재시작 시에만 발생**.\n")
+    lines.append("| 설정 | Whisper 로드(초) | LLM 로드(초) | 총 로딩(초) |")
+    lines.append("|------|-----------------|-------------|------------|")
+    seen = set()
+    for r in results:
+        if r["config_label"] in seen or r["status"] != "ok":
+            continue
+        seen.add(r["config_label"])
+        lines.append(
+            f"| {r['config_label']} | "
+            f"{r.get('whisper_load_sec', 0):.2f} | "
+            f"{r.get('llm_load_sec', 0):.2f} | "
+            f"**{r.get('model_load_sec', 0):.2f}** |"
+        )
+    lines.append("\n---\n")
+
+    # ─── 실제 운영 시 처리 시간 (warm) ───
+    lines.append(f"## ⚡ 실제 운영 시 처리 시간 (Warm)\n")
+    lines.append("모델이 메모리에 이미 있을 때의 시간. **이게 사용자가 매 음성마다 기다리는 시간**.\n")
 
     samples_in_results = sorted(set(r["audio"] for r in results))
     for sample in samples_in_results:
         lines.append(f"### {sample}\n")
-        lines.append("| 설정 | Whisper | Device | LLM | 음성(초) | STT(초) | RTF | LLM(초) | **총(초)** | 상태 |")
-        lines.append("|------|---------|--------|-----|---------|---------|-----|---------|----------|------|")
+        lines.append("| 설정 | Whisper | Device | LLM | 음성(초) | STT(초) | RTF | LLM(초) | **처리(초)** |")
+        lines.append("|------|---------|--------|-----|---------|---------|-----|---------|------------|")
         rows = [r for r in results if r["audio"] == sample]
-        # 총 시간 순 정렬
-        rows.sort(key=lambda x: x.get("total_sec") or 999)
+        rows.sort(key=lambda x: x.get("warm_total_sec") or 999)
         for r in rows:
             if r["status"] == "error":
                 lines.append(
                     f"| {r['config_label']} | {r['whisper_model']} | {r['device']} | "
-                    f"{r['llm']} | - | - | - | - | - | ❌ {(r.get('error') or '')[:30]} |"
+                    f"{r['llm']} | - | - | - | - | ❌ {(r.get('error') or '')[:30]} |"
                 )
             else:
                 lines.append(
                     f"| {r['config_label']} | {r['whisper_model']} | {r['device']} | "
                     f"{r['llm']} | {r.get('audio_sec', 0):.1f} | "
                     f"{r.get('stt_sec', 0):.2f} | {r.get('stt_rtf', 0):.3f} | "
-                    f"{r.get('llm_sec', 0):.2f} | **{r.get('total_sec', 0):.2f}** | ✅ |"
+                    f"{r.get('llm_sec', 0):.2f} | **{r.get('warm_total_sec', 0):.2f}** |"
                 )
         lines.append("")
 
     lines.append("---\n")
 
-    # ─── 2. STT 결과 비교 (음성별) ───
+    # ─── STT 결과 비교 ───
     lines.append(f"## 📝 STT 텍스트 결과 비교\n")
-
     for sample in samples_in_results:
         lines.append(f"### {sample}\n")
         rows = [r for r in results if r["audio"] == sample and r["status"] == "ok"]
         for r in rows:
             lines.append(f"**[{r['config_label'].strip()}]**\n")
             lines.append(f"> {r.get('transcription', '')}\n")
-
-            if r.get("keywords"):
-                top_kws = ", ".join(f"`{kw}`" for kw, _ in r["keywords"][:5])
-                lines.append(f"- 키워드(Top5): {top_kws}")
-            if r.get("categories"):
-                cats = ", ".join(r["categories"].keys())
-                lines.append(f"- 카테고리: {cats}")
-            lines.append("")
         lines.append("---\n")
 
-    # ─── 3. SOAP 결과 비교 (있는 것만) ───
+    # ─── SOAP 결과 비교 ───
     soap_rows = [r for r in results if r.get("soap") and r["status"] == "ok"]
     if soap_rows:
         lines.append(f"## 📋 SOAP 요약 결과 비교\n")
-
         for sample in samples_in_results:
             sample_soaps = [r for r in soap_rows if r["audio"] == sample]
             if not sample_soaps:
@@ -303,23 +341,26 @@ def save_markdown(results, path, samples):
                 lines.append("```\n")
             lines.append("---\n")
 
-    # ─── 4. 통계 요약 ───
+    # ─── 통계 ───
     lines.append(f"## 📈 통계 요약\n")
     ok_results = [r for r in results if r["status"] == "ok"]
     err_results = [r for r in results if r["status"] != "ok"]
-    lines.append(f"- 총 측정: {len(results)}건")
-    lines.append(f"- 성공: {len(ok_results)}건")
-    lines.append(f"- 실패: {len(err_results)}건")
+    lines.append(f"- 총 측정: {len(results)}건 (성공 {len(ok_results)}, 실패 {len(err_results)})")
     if ok_results:
-        fastest = min(ok_results, key=lambda x: x.get("total_sec", 999))
-        slowest = max(ok_results, key=lambda x: x.get("total_sec", 0))
-        lines.append(f"\n- ⚡ **가장 빠름**: {fastest['config_label'].strip()} on "
-                     f"{fastest['audio']} — {fastest['total_sec']:.2f}초")
-        lines.append(f"- 🐢 **가장 느림**: {slowest['config_label'].strip()} on "
-                     f"{slowest['audio']} — {slowest['total_sec']:.2f}초")
-        if slowest['total_sec'] > 0:
-            ratio = slowest['total_sec'] / max(fastest['total_sec'], 0.01)
+        fastest = min(ok_results, key=lambda x: x.get("warm_total_sec", 999))
+        slowest = max(ok_results, key=lambda x: x.get("warm_total_sec", 0))
+        lines.append(f"\n- ⚡ **운영 시 가장 빠름**: {fastest['config_label'].strip()} on "
+                     f"{fastest['audio']} — {fastest['warm_total_sec']:.2f}초")
+        lines.append(f"- 🐢 **운영 시 가장 느림**: {slowest['config_label'].strip()} on "
+                     f"{slowest['audio']} — {slowest['warm_total_sec']:.2f}초")
+        if slowest['warm_total_sec'] > 0:
+            ratio = slowest['warm_total_sec'] / max(fastest['warm_total_sec'], 0.01)
             lines.append(f"- 📊 속도 차이: **{ratio:.1f}배**")
+
+        # 모델 로딩 통계
+        max_load = max(ok_results, key=lambda x: x.get("model_load_sec", 0))
+        lines.append(f"\n- 🔧 **가장 무거운 모델 로딩**: {max_load['config_label'].strip()} — "
+                     f"{max_load.get('model_load_sec', 0):.2f}초 (1회만)")
 
     path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -329,21 +370,16 @@ def save_markdown(results, path, samples):
 # ─────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(
-        description="Voice EMR 벤치마크 — 여러 설정 자동 비교",
+        description="Voice EMR 벤치마크 v2 — Warm-up + 정확한 시간 측정",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--samples", nargs="+", required=True,
-                        help="테스트할 음성 파일들")
-    parser.add_argument("--preset", choices=["quick", "full"], default="quick",
-                        help="quick: STT만 (빠름), full: SOAP 포함 (느림)")
+    parser.add_argument("--samples", nargs="+", required=True)
+    parser.add_argument("--preset", choices=["quick", "full"], default="quick")
     parser.add_argument("--devices", nargs="+", default=None,
-                        choices=["cpu", "cuda"],
-                        help="테스트할 디바이스 (기본: 사용 가능한 거 자동)")
-    parser.add_argument("--output-dir", default="bench_results",
-                        help="결과 저장 폴더 (기본: bench_results)")
+                        choices=["cpu", "cuda"])
+    parser.add_argument("--output-dir", default="bench_results")
     args = parser.parse_args()
 
-    # 디바이스 자동 결정
     if args.devices is None:
         devices = ["cpu"]
         try:
@@ -356,15 +392,12 @@ def main():
         devices = args.devices
 
     print(f"\n{'='*70}")
-    print(f"  Voice EMR 벤치마크 시작")
+    print(f"  Voice EMR 벤치마크 v2 시작 (Warm-up 포함)")
     print(f"{'='*70}")
     print(f"  샘플: {len(args.samples)}개")
-    for s in args.samples:
-        print(f"    - {s}")
     print(f"  디바이스: {', '.join(devices)}")
     print(f"  프리셋: {args.preset}")
 
-    # 샘플 파일 검증
     valid_samples = []
     for s in args.samples:
         p = Path(s)
@@ -376,24 +409,17 @@ def main():
         print("❌ 처리할 음성 파일 없음")
         sys.exit(1)
 
-    # 설정 빌드
     configs = (build_quick_configs(devices) if args.preset == "quick"
                else build_full_configs(devices))
 
-    # 예상 시간 안내
-    print(f"\n  실행할 설정: {len(configs)}개")
-    print(f"  ⏱  예상 소요: {len(configs) * 1.5:.0f}~{len(configs) * 5:.0f}분")
-    print(f"     (모델 로드 + 추론 시간 포함, 첫 다운로드 별도)")
-    print()
+    print(f"  실행할 설정: {len(configs)}개\n")
 
-    # 출력 폴더
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_path = out_dir / "results.csv"
     json_path = out_dir / "results.json"
     md_path = out_dir / "report.md"
 
-    # 부분 저장 함수
     def save_partial(results):
         try:
             save_csv(results, csv_path)
@@ -402,7 +428,6 @@ def main():
         except Exception as e:
             print(f"  (부분저장 실패: {e})")
 
-    # 벤치마크 실행
     results = []
     t_overall = time.time()
     for i, config in enumerate(configs):
@@ -411,19 +436,17 @@ def main():
 
     elapsed_total = time.time() - t_overall
 
-    # 최종 저장
     save_csv(results, csv_path)
     save_json(results, json_path)
     save_markdown(results, md_path, valid_samples)
 
-    # 완료
     print(f"\n{'='*70}")
     print(f"  ✅ 벤치마크 완료 — 총 {elapsed_total/60:.1f}분")
     print(f"{'='*70}")
-    print(f"\n  📁 저장 위치: {out_dir.resolve()}")
-    print(f"     - results.csv   (엑셀에서 열기)")
-    print(f"     - report.md     (마크다운, 모든 결과 포함) ⭐")
-    print(f"     - results.json  (프로그래밍용 raw 데이터)")
+    print(f"\n  📁 저장: {out_dir.resolve()}")
+    print(f"     - results.csv   (엑셀)")
+    print(f"     - report.md     (마크다운, 로딩·운영 시간 분리됨) ⭐")
+    print(f"     - results.json  (raw 데이터)")
     print()
 
 
