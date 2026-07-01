@@ -1,0 +1,66 @@
+# ─── Python ───
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+
+# ─── 가상환경 ───
+venv/
+env/
+ENV/
+.venv/
+
+# ─── IDE / 에디터 ───
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ─── ML 모델 캐시 (절대 올리지 말 것 — 용량 크고 라이선스 이슈) ───
+.cache/
+*.gguf
+*.bin
+*.pt
+*.pth
+*.onnx
+*.safetensors
+~/.cache/huggingface/
+
+# ─── 환자 데이터 (절대 올리지 말 것) ───
+samples/
+audio_data/
+patient_data/
+*.wav
+*.mp3
+*.m4a
+*.flac
+
+# ─── 실행 결과 ───
+results/
+output/
+*.csv
+*.json
+report.md
+
+# ─── 학습 산출물 ───
+checkpoints/
+runs/
+wandb/
+mlruns/
+logs/
+*.log
+
+# ─── 비밀 정보 (절대) ───
+.env
+.env.local
+secrets/
+credentials/
+config.local.*
+api_keys.txt

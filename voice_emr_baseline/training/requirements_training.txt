@@ -1,0 +1,22 @@
+# Voice EMR 전이학습 — 추가 의존성
+# 기존 requirements.txt 위에 추가로 설치
+
+# 핵심 — Whisper LoRA 학습
+transformers>=4.45.0,<5.0.0
+datasets>=2.20.0
+peft>=0.13.0
+accelerate>=0.34.0
+evaluate>=0.4.0
+
+# 모니터링
+tensorboard>=2.15.0
+gradio>=4.44.0       # 이미 있을 수 있음
+pandas>=2.0.0
+psutil>=5.9.0
+
+# 오디오 처리
+librosa>=0.10.0
+soundfile>=0.12.0
+
+# 멀티 GPU 분산학습 (선택)
+# deepspeed>=0.15.0  # 필요 시 설치

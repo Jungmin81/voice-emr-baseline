@@ -1,0 +1,145 @@
+{
+  "model_dir": "outputs/exp1/phase_b_small/checkpoint-2000",
+  "manifest_dir": "manifests/exp1",
+  "split": "test",
+  "n_samples": 2400,
+  "overall_cer": 0.023226063224926086,
+  "by_category": {
+    "간호사": 0.013818648051855545,
+    "의사": 0.016947501704490112,
+    "환자": 0.041306347746090155
+  },
+  "by_gender": {
+    "F": 0.017321695083894893,
+    "M": 0.03321852277076158
+  },
+  "by_age": {
+    "05": 0.013818648051855545,
+    "04": 0.016947501704490112,
+    "08": 0.045778411115069466,
+    "06": 0.0365296803652968
+  },
+  "samples": [
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9074-01-02-F-05-A.wav",
+      "ref": "검사는 상황에 따라 걸리는 시간이 달라 정확히 얼마나 걸리는지 확답하기 어렵습니다",
+      "hyp": "검사는 상황에 따라 걸리는 시간이 달라 정확히 얼마나 걸리는지 확답하기 어렵습니다",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9127-01-02-F-05-A.wav",
+      "ref": "약간 주황빛을 띄는 빨간색으로 주황색보다는 빨간색에 가깝습니다",
+      "hyp": "약간 주황빛을 띄는 빨간색으로 주황색보다는 빨간색에 가깝습니다",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9113-01-02-F-05-A.wav",
+      "ref": "방사선이란 게 일상생활에서도 수시로 알게 모르게 방사선에 노출되나 실제 건강에 위험을 초래하는 경우는 극히 일부입니다",
+      "hyp": "방사선이라는 게 일상생활에서도 수시로 알게 모르게 방사선에 노출되나 실제 건강에 위험을 초래하는 경우는 급히 일고입니다",
+      "match": false
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9309-01-02-F-05-A.wav",
+      "ref": "입안이 너무 건조하면 젖은 수건에 입 대는 것도 좋은 방법입니다",
+      "hyp": "입안이 너무 건조하면 젖은 수건에 입대는 것도 좋은 방법입니다",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9277-01-02-F-05-A.wav",
+      "ref": "네 보통 잘 안 걸리는 병이긴 합니다",
+      "hyp": "네 보통 잘 안 걸리는 병이긴 합니다",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9236-01-02-F-05-A.wav",
+      "ref": "네 큰 거 위주로 말해주시고 작은 것도 있으면 말해주셔도 돼요",
+      "hyp": "네 큰 거 위주로 말해 주시고 작은 것도 있으면 말해 주셔도 돼요",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9077-01-02-F-05-A.wav",
+      "ref": "쓸개와 방광의 문제가 있는지 확인하기 위해 검사합니다",
+      "hyp": "슬개와 방광의 문제가 있는지 확인하기 위해 검사합니다",
+      "match": false
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9222-01-02-F-05-A.wav",
+      "ref": "배를 눌렀을 때와 가만히 있을 때 통증이 어떻게 다른 가요",
+      "hyp": "배를 눌렀을 때와 가만히 있을 때 통증이 어떻게 다른가요",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9358-01-02-F-05-A.wav",
+      "ref": "네 맹장수술도 포함이죠",
+      "hyp": "네 맹장 수술도 포함이죠",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9059-01-02-F-05-A.wav",
+      "ref": "따끔거림이 심하신가요 어떤 연관이 있는지는 자세한 검사가 필요할 것 같네요",
+      "hyp": "따끔거림이 심하신가요 어떤 연관이 있는지는 자세한 검사가 필요할 것 같네요",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9310-01-02-F-05-A.wav",
+      "ref": "보조제를 먹기보다는 운동이나 다른 방법을 통해서 주무시는 것이 더 좋을 듯합니다",
+      "hyp": "조주대를 먹기보다는 운동이나 다른 방법을 통해서 주무시는 것이 더 좋을 듯 합니다",
+      "match": false
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9302-01-02-F-05-A.wav",
+      "ref": "목발은 대여가 안 되는 걸로 알고 있어요",
+      "hyp": "목발은 대여가 안 되는 걸로 알고 있어요",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9046-01-02-F-05-A.wav",
+      "ref": "검사 결과 약물 알레르기 반응 없으시다고요",
+      "hyp": "검사 결과 약물 알레르기 반응 없으시다고요",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9212-01-02-F-05-A.wav",
+      "ref": "집먼지 진드기는 항상 생길 가능성이 존재하므로 자주 세탁해 주는 것이 중요합니다",
+      "hyp": "십만 지진 특인 흉상 생길 가능성이 존재하므로 자주 습닥해 주는 것이 중요합니다",
+      "match": false
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9311-01-02-F-05-A.wav",
+      "ref": "수면제 복용보다 수면 위생을 잘 지키고 있는 지부터 파악해야 합니다",
+      "hyp": "수면제 복용보다 수면 위생을 잘 지키고 있는지부터 부학해야 합니다",
+      "match": false
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9238-01-02-F-05-A.wav",
+      "ref": "일단은 피 색을 통해 출혈 부위를 알아보기 위한 것이지 좋고 나쁘고는 없습니다",
+      "hyp": "일단은 피색을 통해 출혈 부위를 알아보기 위한 것이지 좋고 나쁘고는 없습니다",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9328-01-02-F-05-A.wav",
+      "ref": "마취하고 마취가 잘 안 깬 적이 있나요",
+      "hyp": "마취하고 마취가 잘 안 깬 적이 있나요",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9312-01-02-F-05-A.wav",
+      "ref": "가벼운 독서는 어떠신가요",
+      "hyp": "가벼운 독서는 어떠신가요",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9280-01-02-F-05-A.wav",
+      "ref": "화상의 특징입니다",
+      "hyp": "화상의 특징입니다",
+      "match": true
+    },
+    {
+      "audio": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training/[T원천]의료진_간호사_3/3/HA_1876/HA_1876-9211-01-02-F-05-A.wav",
+      "ref": "멸균 처리해 놓은 것이 소독 붕대이기 때문에 이 차 감염 예방에 도움을 줍니다",
+      "hyp": "열균 처리해 놓은 것이 소독 붕대이기 때문에 이차 감염 예방에 도움이 됩니다",
+      "match": false
+    }
+  ],
+  "elapsed_sec": 1675.9685561656952
+}

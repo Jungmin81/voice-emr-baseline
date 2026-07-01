@@ -1,0 +1,14 @@
+{
+  "ts": 1782844569.1179578,
+  "global_step": 52278,
+  "max_steps": 52278,
+  "epoch": 3.0,
+  "num_train_epochs": 3,
+  "progress_pct": 100.0,
+  "elapsed_sec": 145062.2,
+  "steps_per_sec": 0.3604,
+  "sec_per_step": 2.775,
+  "remaining_steps": 0,
+  "eta_sec": 0.0,
+  "best_metric": 0.013847538270056248
+}

@@ -9,21 +9,31 @@ dist/
 *.egg-info/
 *.egg
 
-# ─── 가상환경 ───
+# ─── 가상환경 (대용량 — 절대 올리지 말 것) ───
 venv/
+venv_train/
 env/
 ENV/
 .venv/
 
-# ─── IDE / 에디터 ───
-.vscode/
-.idea/
-*.swp
-*.swo
-.DS_Store
-Thumbs.db
+# ─── 학습 산출물 / 체크포인트 (수 GB) ───
+outputs/
+training/outputs/
+**/outputs/
 
-# ─── ML 모델 캐시 (절대 올리지 말 것 — 용량 크고 라이선스 이슈) ───
+# ─── 데이터셋 매니페스트 (수백 MB, 데이터 경로 목록 — GitHub 100MB 초과) ───
+manifests/
+**/manifests/
+*.jsonl
+checkpoints/
+runs/
+wandb/
+mlruns/
+tensorboard/
+logs/
+*.log
+
+# ─── ML 모델 가중치 (용량·라이선스) ───
 .cache/
 *.gguf
 *.bin
@@ -31,9 +41,8 @@ Thumbs.db
 *.pth
 *.onnx
 *.safetensors
-~/.cache/huggingface/
 
-# ─── 환자 데이터 (절대 올리지 말 것) ───
+# ─── 오디오 / 환자 데이터 (절대 올리지 말 것) ───
 samples/
 audio_data/
 patient_data/
@@ -42,20 +51,19 @@ patient_data/
 *.m4a
 *.flac
 
-# ─── 실행 결과 ───
-results/
-output/
-*.csv
-*.json
-report.md
+# ─── 아카이브 / 스냅샷 ───
+*.tar.gz
+*.tar
+*.zip
 
-# ─── 학습 산출물 ───
-checkpoints/
-runs/
-wandb/
-mlruns/
-logs/
-*.log
+# ─── IDE / 로컬 도구 설정 ───
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+.claude/
 
 # ─── 비밀 정보 (절대) ───
 .env

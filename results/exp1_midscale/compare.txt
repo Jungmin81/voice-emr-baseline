@@ -1,0 +1,15 @@
+
+================================================================
+  전이학습 전/후 CER 비교  (test split, 동일 셋)
+================================================================
+  before: /home/jungmin.cheon/jm_repo/voice_v2/voice_emr/voice_emr_baseline/training/outputs/exp1/eval_BEFORE_base_medium.json
+  after : /home/jungmin.cheon/jm_repo/voice_v2/voice_emr/voice_emr_baseline/training/outputs/exp1/eval_AFTER_ft.json
+
+구분             전(base)       후(FT)        상대개선
+----------------------------------------------
+전체               7.07%       2.32%      -67.1%
+간호사              3.80%       1.38%      -63.6%
+의사               6.84%       1.69%      -75.2%
+환자              11.51%       4.13%      -64.1%
+----------------------------------------------
+※ 의료진=의사+간호사, 환자 별도. 사장님 환경(의사↔환자) 핵심은 '의사','환자' 행.

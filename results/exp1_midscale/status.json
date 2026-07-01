@@ -1,0 +1,10 @@
+{
+  "phase": "b",
+  "phase_name": "phase_b_small",
+  "started_at": 1782461171.4445457,
+  "status": "stopped",
+  "base_model": "openai/whisper-medium",
+  "train_size": 52936,
+  "val_size": 2762,
+  "ended_at": 1782468126.0454235
+}

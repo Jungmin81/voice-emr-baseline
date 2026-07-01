@@ -1,0 +1,100 @@
+{
+  "train": {
+    "n_samples": 1019208,
+    "n_speakers": 2185,
+    "by_category": {
+      "의사": 297332,
+      "환자": 424378,
+      "간호사": 297498
+    },
+    "by_gender": {
+      "F": 666890,
+      "M": 352305,
+      "Z": 13
+    },
+    "by_age": {
+      "04": 393972,
+      "08": 97129,
+      "05": 276582,
+      "02": 23088,
+      "06": 112181,
+      "03": 64207,
+      "07": 33711,
+      "09": 17627,
+      "01": 698,
+      "99": 13
+    },
+    "text_chars_avg": 21.1,
+    "text_chars_max": 255,
+    "text_chars_min": 2
+  },
+  "val": {
+    "n_samples": 55985,
+    "n_speakers": 120,
+    "by_category": {
+      "간호사": 15428,
+      "의사": 16969,
+      "환자": 23588
+    },
+    "by_gender": {
+      "F": 38368,
+      "M": 17616,
+      "Z": 1
+    },
+    "by_age": {
+      "04": 24242,
+      "05": 12636,
+      "06": 6689,
+      "99": 1,
+      "02": 1030,
+      "07": 1506,
+      "08": 6772,
+      "03": 2710,
+      "09": 399
+    },
+    "text_chars_avg": 21.1,
+    "text_chars_max": 255,
+    "text_chars_min": 2
+  },
+  "test": {
+    "n_samples": 55618,
+    "n_speakers": 120,
+    "by_category": {
+      "간호사": 16490,
+      "의사": 15803,
+      "환자": 23325
+    },
+    "by_gender": {
+      "F": 36446,
+      "M": 19172
+    },
+    "by_age": {
+      "04": 22533,
+      "05": 15666,
+      "06": 5159,
+      "07": 2435,
+      "03": 4620,
+      "08": 3651,
+      "09": 1167,
+      "02": 387
+    },
+    "text_chars_avg": 20.8,
+    "text_chars_max": 255,
+    "text_chars_min": 2
+  },
+  "config": {
+    "data_dir": "/mnt/nas_raw/rawdata/etc/voice/aihub/Training",
+    "output": "manifests/full",
+    "categories": [
+      "환자",
+      "의사",
+      "간호사"
+    ],
+    "max_speakers": null,
+    "max_utts_per_speaker": null,
+    "stratify": true,
+    "train_ratio": 0.9,
+    "val_ratio": 0.05,
+    "seed": 42
+  }
+}
