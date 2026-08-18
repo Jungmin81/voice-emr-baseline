@@ -41,8 +41,11 @@
 | `scripts/`, `data_scripts/` | 실험·데이터 준비 스크립트 |
 | `results/` | 전/후 평가 결과 (CER 비교) |
 
-> **가중치**: 학습된 LoRA 어댑터는 `voice_emr_baseline/training/outputs/full/phase_c_full/final/adapter_model.safetensors` (약 73MB).
+> **가중치**: 학습된 LoRA 어댑터는 `voice_emr_baseline/training/outputs/full/phase_c_full/final/adapter_model.safetensors` (약 75MB).
 > 용량 문제로 git에는 포함되지 않습니다(`.gitignore`). 로컬/별도 스토리지에 보관하세요.
+>
+> 다른 PC에서 세팅할 때는 **clone 후 산출물 압축본을 저장소 루트에 해제**하면 됩니다 —
+> 절차: **[docs/RESTORE_ON_NEW_PC.md](docs/RESTORE_ON_NEW_PC.md)**
 
 ## 실행 (데모 앱)
 
