@@ -291,6 +291,35 @@ def label_roles(turns):
     return mapping
 
 
+def render_dialogue_html(turns, roles):
+    """화자분리 대화를 좌(의사)/우(환자) 채팅 말풍선 HTML로 렌더."""
+    import html as _html
+    rows = []
+    for s, t in turns:
+        role = roles.get(s, s)
+        if role == "의사":
+            side, cls = "left", "doc"
+        elif role == "환자":
+            side, cls = "right", "pat"
+        else:
+            side, cls = "left", "etc"
+        rows.append(
+            f'<div class="chat-row {side}">'
+            f'<div class="chat-bubble {cls}">'
+            f'<span class="who">{_html.escape(str(role))}</span>{_html.escape(t)}'
+            f'</div></div>'
+        )
+    return '<div class="chat-wrap">' + "".join(rows) + "</div>"
+
+
+def plain_to_html(text):
+    """비화자분리(일반 STT) 텍스트를 줄바꿈 보존 HTML로 감쌈."""
+    import html as _html
+    if not text:
+        return ""
+    return f'<div class="stt-plain">{_html.escape(text)}</div>'
+
+
 def analyze_diarized(audio_path, do_soap, num_speakers=2):
     """화자분리 → 역할라벨 → 대화 텍스트 → (선택)SOAP."""
     if not audio_path:
@@ -303,18 +332,19 @@ def analyze_diarized(audio_path, do_soap, num_speakers=2):
     if not turns:
         return "", "", "⚠️ 인식된 발화가 없습니다."
     roles = label_roles(turns)
-    dialogue = "\n".join(f"{roles.get(s, s)}: {t}" for s, t in turns)
+    dialogue = "\n".join(f"{roles.get(s, s)}: {t}" for s, t in turns)  # SOAP 입력(평문)
+    dialogue_html = render_dialogue_html(turns, roles)                 # 화면 표시(말풍선)
     t_diar = time.time() - t0
     nspk = len({roles.get(s, s) for s, _ in turns})
     if not do_soap:
-        return dialogue, "", f"✅ 화자분리+STT {t_diar:.1f}s · 화자 {nspk}명 · SOAP 건너뜀"
+        return dialogue_html, "", f"✅ 화자분리+STT {t_diar:.1f}s · 화자 {nspk}명 · SOAP 건너뜀"
     try:
         t1 = time.time()
         soap = run_soap(dialogue)
         meta = f"✅ 화자분리+STT {t_diar:.1f}s · SOAP {time.time()-t1:.1f}s · 화자 {nspk}명"
     except Exception as e:
-        return dialogue, f"❌ SOAP 실패: {e}", f"✅ 화자분리 {t_diar:.1f}s · SOAP 실패"
-    return dialogue, soap, meta
+        return dialogue_html, f"❌ SOAP 실패: {e}", f"✅ 화자분리 {t_diar:.1f}s · SOAP 실패"
+    return dialogue_html, soap, meta
 
 
 def get_cjk_bad_words(tok):
@@ -408,7 +438,8 @@ def run_analyze(audio_path, do_soap, use_vad, use_diar, num_spk):
     if use_diar:
         ns = 0 if str(num_spk) in ("자동", "auto", "0") else int(num_spk)
         return analyze_diarized(audio_path, do_soap, num_speakers=ns)
-    return analyze(audio_path, do_soap, use_vad=use_vad)
+    stt_txt, soap, meta = analyze(audio_path, do_soap, use_vad=use_vad)
+    return plain_to_html(stt_txt), soap, meta
 
 
 # 브라우저에서 마이크 유무 확인 (서버가 아니라 클라이언트 장치를 봐야 맞음)
@@ -445,22 +476,40 @@ APP_CSS = """
     min-width: max-content !important;
     flex-shrink: 0 !important;
 }
+
+/* 화자분리 대화 — 좌(의사)/우(환자) 채팅 말풍선 */
+.chat-wrap { display:flex; flex-direction:column; gap:8px; padding:6px 2px;
+             max-height:74vh; overflow-y:auto; }
+.chat-row { display:flex; width:100%; }
+.chat-row.left  { justify-content:flex-start; }
+.chat-row.right { justify-content:flex-end; }
+.chat-bubble { max-width:78%; padding:8px 12px; border-radius:14px;
+               font-size:14px; line-height:1.45; word-break:break-word;
+               box-shadow:0 1px 2px rgba(0,0,0,.08); }
+.chat-bubble .who { display:block; font-size:11px; font-weight:700;
+                    margin-bottom:2px; opacity:.75; }
+.chat-bubble.doc { background:#e8f0fe; color:#1a3d6d; border-bottom-left-radius:4px; }
+.chat-bubble.pat { background:#eafaf0; color:#1c5b34; border-bottom-right-radius:4px; }
+.chat-bubble.etc { background:#f0f0f2; color:#333; }
+.stt-plain { white-space:pre-wrap; font-size:14px; line-height:1.5; padding:6px 2px; }
 """
 
-with gr.Blocks(title="Voice EMR (파인튜닝)", theme=gr.themes.Soft(), css=APP_CSS) as demo:
+with gr.Blocks(title="Voice EMR (파인튜닝)") as demo:
     gr.Markdown(
         "# 🎙️ Voice EMR — 음성 → STT → SOAP\n"
         "파인튜닝 Whisper(medium+LoRA, 중규모 모델)로 받아쓰고 Qwen2.5로 SOAP 차트를 생성합니다."
     )
-    with gr.Row():
-        do_soap = gr.Checkbox(value=True, label="SOAP 생성 (끄면 STT만)")
-        use_vad = gr.Checkbox(value=True, label="VAD 청킹 (긴 음성 권장)")
-        use_diar = gr.Checkbox(value=False, label="🧑‍⚕️ 화자 분리(의사/환자)")
-        num_spk = gr.Dropdown(choices=["2", "자동"], value="2", label="화자 수",
-                              scale=0, min_width=110)
+    with gr.Row(equal_height=False):
+        # ── 좌측: 옵션(상) → 오디오(중) → SOAP(하) ──
+        with gr.Column(scale=2, min_width=360):
+            with gr.Group():
+                gr.Markdown("#### ⚙️ 옵션")
+                do_soap = gr.Checkbox(value=True, label="SOAP 생성 (끄면 STT만)")
+                use_vad = gr.Checkbox(value=True, label="VAD 청킹 (긴 음성 권장)")
+                use_diar = gr.Checkbox(value=False, label="🧑‍⚕️ 화자 분리(의사/환자)")
+                num_spk = gr.Dropdown(choices=["2", "자동"], value="2", label="화자 수")
 
-    with gr.Row():
-        with gr.Column(scale=3, min_width=420):
+            gr.Markdown("#### 🎧 오디오 입력")
             with gr.Tabs():
                 with gr.Tab("📁 녹음본 업로드"):
                     up_audio = gr.Audio(sources=["upload"], type="filepath",
@@ -475,11 +524,14 @@ with gr.Blocks(title="Voice EMR (파인튜닝)", theme=gr.themes.Soft(), css=APP
                                          elem_id="aud_mic")
                     mic_btn = gr.Button("▶ 분석", variant="primary")
             meta = gr.Markdown()
-        with gr.Column(scale=3):
-            gr.Markdown("### 📝 STT 결과 (화자분리 시: 의사/환자 대화)")
-            stt_out = gr.Textbox(lines=8, label="")
+
             gr.Markdown("### 🧾 SOAP 결과")
             soap_out = gr.Markdown()
+
+        # ── 우측: STT 결과 전체 ──
+        with gr.Column(scale=3):
+            gr.Markdown("### 📝 STT 결과 (화자분리 시: 🩺의사 왼쪽 / 🧑환자 오른쪽)")
+            stt_out = gr.HTML()
 
     mic_check_btn.click(None, inputs=None, outputs=mic_status, js=MIC_CHECK_JS)
     up_btn.click(run_analyze, inputs=[up_audio, do_soap, use_vad, use_diar, num_spk],
@@ -500,4 +552,5 @@ if __name__ == "__main__":
     pw = os.environ.get("DEMO_PASS")
     auth = (user, pw) if user and pw else None
     demo.queue().launch(server_name="0.0.0.0", server_port=port,
-                        share=share, auth=auth)
+                        share=share, auth=auth,
+                        theme=gr.themes.Soft(), css=APP_CSS)
